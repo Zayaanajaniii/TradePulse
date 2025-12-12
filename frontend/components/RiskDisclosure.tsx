@@ -30,6 +30,13 @@ export default function RiskDisclosure({ quality, meta }: { quality: any, meta: 
                     <span>CAUTION: Low Volume asset. Technicals may be unreliable due to slippage risk.</span>
                 </div>
             )}
+
+            {/* Analytical Framing */}
+            <div className="mt-2 pt-3 border-t border-gray-800 text-[9px] text-gray-600 leading-relaxed text-justify">
+                This system provides quantitative signal analysis based on historical data and observed sentiment.
+                It does not predict future prices or provide investment advice. All signals are deterministic
+                derivations of past market behavior.
+            </div>
         </div>
     );
 }

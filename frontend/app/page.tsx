@@ -5,12 +5,14 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
 import {
-  Search, AlertCircle, BarChart3, Zap, Newspaper, TrendingUp
+  Search, AlertCircle, BarChart3, Zap, Newspaper, TrendingUp, Clock
 } from 'lucide-react';
 import SignalExplanation from '../components/SignalExplanation';
 import FactorBreakdown from '../components/FactorBreakdown';
 import RiskDisclosure from '../components/RiskDisclosure';
 import MetricCard from '../components/MetricCard';
+import ProvenancePanel from '../components/ProvenancePanel';
+import RegimeDisplay from '../components/RegimeDisplay';
 import { AnalysisResult } from '../types';
 
 // --- Local Components (Simple) ---
@@ -84,14 +86,18 @@ export default function Home() {
         sentiment_score: data.sentiment_analysis.score_normalized,
         confidence_score: `${Math.round(data.signal_analysis.confidence_score)}%`,
         signal: data.signal_analysis.signal,
-        headlines: data.sentiment_analysis.top_headlines.map((h: any) => h.title), // Simplified list for now
+        headlines: data.sentiment_analysis.top_headlines.map((h: any) => h.title),
         history: data.price_history,
         factors: data.signal_analysis.factors,
         meta: {
           volume: data.fundamentals.volume_avg ? `${(data.fundamentals.volume_avg / 1000000).toFixed(1)}M` : 'N/A',
           high: 0,
           low: 0
-        }
+        },
+        // v6 Fields
+        timestamp: data.timestamp,
+        adx: data.technical_analysis.adx || 0,
+        atr: data.technical_analysis.atr || 0
       });
     } catch (err: any) {
       setError(err.message || 'System Failure');
@@ -124,9 +130,15 @@ export default function Home() {
               <BarChart3 className="text-white h-6 w-6" />
             </div>
             <h1 className="text-2xl font-bold tracking-tighter text-white">
-              Trade<span className="text-cyan-400">Pulse</span> <span className="text-[10px] text-gray-400 font-mono border border-gray-700 px-1 rounded ml-1 bg-gray-900">v5.0 INTELLIGENCE</span>
+              Trade<span className="text-cyan-400">Pulse</span> <span className="text-[10px] text-gray-400 font-mono border border-gray-700 px-1 rounded ml-1 bg-gray-900">v6.0 TRUST</span>
             </h1>
           </div>
+          {result && (
+            <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-gray-400 bg-gray-900 px-3 py-1.5 rounded border border-gray-800">
+              <Clock className="w-3 h-3 text-cyan-500" />
+              <span>ANALYSIS TIME: {new Date(result.timestamp).toLocaleTimeString()}</span>
+            </div>
+          )}
         </header>
 
         {/* Search */}
@@ -203,8 +215,8 @@ export default function Home() {
                   <div className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 mb-2 text-center leading-none">
                     {result.signal}
                   </div>
-                  <div className="mt-4 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono flex items-center gap-2">
-                    <span>CONFIDENCE:</span>
+                  <div className="mt-4 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono flex items-center gap-2" title="Analytical Confidence derived from factor agreement and data completeness">
+                    <span>SIGNAL CONFIDENCE:</span>
                     <span className="font-bold text-white">{result.confidence_score}</span>
                   </div>
                 </div>
@@ -251,6 +263,17 @@ export default function Home() {
 
                 {/* Sidebar: Sentiment & Risk */}
                 <div className="space-y-6">
+
+                  {/* Component: Regime Display (New) */}
+                  <RegimeDisplay adx={result.adx} atr={result.atr} />
+
+                  {/* Component: Provenance Panel (New) */}
+                  <ProvenancePanel
+                    timestamp={result.timestamp}
+                    dataPoints={result.history.length + 200} // approx total history fetched
+                    newsCount={result.headlines.length}
+                  />
+
                   {/* Sentiment Gauge */}
                   <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 flex flex-col items-center">
                     <h3 className="text-[10px] font-mono text-gray-500 mb-2 uppercase tracking-widest">News Sentiment Impact</h3>

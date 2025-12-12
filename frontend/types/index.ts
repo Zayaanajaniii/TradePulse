@@ -35,4 +35,7 @@ export type AnalysisResult = {
     history: PricePoint[];
     factors: Factor[];
     meta: MetaData;
+    timestamp: string;
+    adx: number;
+    atr: number;
 };
