@@ -129,9 +129,12 @@ export default function Home() {
             <div className="bg-gradient-to-tr from-cyan-500 to-blue-600 p-2 rounded-lg">
               <BarChart3 className="text-white h-6 w-6" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tighter text-white">
-              Trade<span className="text-cyan-400">Pulse</span> <span className="text-[10px] text-gray-400 font-mono border border-gray-700 px-1 rounded ml-1 bg-gray-900">v6.0 TRUST</span>
-            </h1>
+            <div className="flex flex-col">
+              <h1 className="text-2xl font-bold tracking-tighter text-white leading-none">
+                Trade<span className="text-cyan-400">Pulse</span> <span className="text-[10px] text-gray-400 font-mono border border-gray-700 px-1 rounded ml-1 bg-gray-900 align-middle">v6.0 TRUST</span>
+              </h1>
+              <p className="text-[10px] text-gray-500 font-mono mt-1">Made by Zayaan Ajani</p>
+            </div>
           </div>
           {result && (
             <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-gray-400 bg-gray-900 px-3 py-1.5 rounded border border-gray-800">
