@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from backend.indicators.technical import calculate_rsi, calculate_macd, calculate_atr, calculate_adx
+from indicators.technical import calculate_rsi, calculate_macd, calculate_atr, calculate_adx
 
 @pytest.fixture
 def mock_price_data():

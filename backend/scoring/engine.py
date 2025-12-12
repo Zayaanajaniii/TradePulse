@@ -3,16 +3,16 @@ import pandas as pd
 from typing import List, Tuple
 import logging
 
-from ..models.schemas import (
+from models.schemas import (
     AnalysisResponse, Signal, DataQuality, FactorContribution, 
     TradeSignal, Fundamentals, TechnicalIndicators, SentimentAnalysis, PricePoint
 )
-from ..indicators.technical import (
+from indicators.technical import (
     calculate_rsi, calculate_macd, calculate_atr, calculate_adx
 )
-from ..sources.yfinance_client import get_stock_data
-from ..sources.news_scraper import get_news_sentiment
-from ..utils.logging_utils import get_request_id
+from sources.yfinance_client import get_stock_data
+from sources.news_scraper import get_news_sentiment
+from utils.logging_utils import get_request_id
 
 logger = logging.getLogger("TradePulse.Scoring")
 

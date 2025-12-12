@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from ..models.schemas import AnalysisResponse
-from ..scoring.engine import analyze_ticker
-from ..sources.yfinance_client import cache as yf_cache
+from models.schemas import AnalysisResponse
+from scoring.engine import analyze_ticker
+from sources.yfinance_client import cache as yf_cache
 import logging
 
 router = APIRouter()

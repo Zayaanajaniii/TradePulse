@@ -5,7 +5,7 @@ import asyncio
 from typing import List, Dict
 import logging
 from datetime import datetime
-from ..models.schemas import NewsItem, SentimentAnalysis
+from models.schemas import NewsItem, SentimentAnalysis
 
 logger = logging.getLogger("TradePulse.News")
 analyzer = SentimentIntensityAnalyzer()

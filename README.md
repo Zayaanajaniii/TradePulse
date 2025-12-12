@@ -61,13 +61,6 @@ MIT
 
 ## 🚀 Deployment Guide
 
-To make TradePulse accessible to the world, you need to deploy the Backend (Python) and Frontend (Next.js) separately.
-
-### 1. Deploy Backend (The Brain)
-We recommend **Render** or **Railway** (free tiers available).
-
-1.  Push your code to GitHub.
-2.  Sign up at [render.com](https://render.com).
 3.  Click **New +** -> **Web Service**.
 4.  Connect your `TradePulse` repo.
 5.  **Settings**:
