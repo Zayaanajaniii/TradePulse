@@ -5,3 +5,10 @@ textblob
 beautifulsoup4
 requests
 lxml
+vaderSentiment
+httpx
+cachetools
+pytest
+pandas
+numpy
+pydantic

@@ -15,7 +15,10 @@ TradePulse is a **Real-Time Stock Sentiment Analysis Dashboard** that combines f
 ## Tech Stack
 
 - **Frontend**: Next.js 16, React, Tailwind CSS, Recharts, Lucide Icons.
-- **Backend**: FastAPI, Python, TextBlob (NLP), BeautifulSoup (Scraping), Yfinance.
+- **Backend (v4)**: FastAPI, Python 3.9+, Pydantic (Validation), Pandas (Quant), VADER (Sentiment).
+- **Architecture**: Modular Services, Async I/O, Caching, Typed Schemas.
+
+See [QUANT_NOTES.md](backend/QUANT_NOTES.md) for details on the math/logic.
 
 ## Installation
 
@@ -52,5 +55,39 @@ The dashboard runs on `http://localhost:3000`.
    - **BUY**: Bullish Trend + Neutral Sentiment
    - **SELL**: Bearish Trend + Negative Sentiment
 
+
 ## License
 MIT
+
+## 🚀 Deployment Guide
+
+To make TradePulse accessible to the world, you need to deploy the Backend (Python) and Frontend (Next.js) separately.
+
+### 1. Deploy Backend (The Brain)
+We recommend **Render** or **Railway** (free tiers available).
+
+1.  Push your code to GitHub.
+2.  Sign up at [render.com](https://render.com).
+3.  Click **New +** -> **Web Service**.
+4.  Connect your `TradePulse` repo.
+5.  **Settings**:
+    *   **Root Directory**: `backend`
+    *   **Build Command**: `pip install -r requirements.txt`
+    *   **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6.  Click **Deploy**.
+7.  Copy your new URL (e.g., `https://tradepulse-api.onrender.com`).
+
+### 2. Deploy Frontend (The UI)
+We recommend **Vercel** (creators of Next.js).
+
+1.  Sign up at [vercel.com](https://vercel.com).
+2.  Click **Add New** -> **Project**.
+3.  Import `TradePulse`.
+4.  **Settings**:
+    *   **Root Directory**: `frontend`
+    *   **Environment Variables**:
+        *   Name: `NEXT_PUBLIC_API_URL`
+        *   Value: `https://tradepulse-api.onrender.com` (The URL from Step 1)
+5.  Click **Deploy**.
+
+🎉 Your app will be live at `https://tradepulse.vercel.app`!

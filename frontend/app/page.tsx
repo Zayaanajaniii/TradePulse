@@ -1,18 +1,53 @@
 'use client';
 
 import { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, DollarSign, Newspaper, Search, AlertCircle } from 'lucide-react';
+import {
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+} from 'recharts';
+import {
+  Search, AlertCircle, BarChart3, Zap, Newspaper, TrendingUp
+} from 'lucide-react';
+import SignalExplanation from '../components/SignalExplanation';
+import FactorBreakdown from '../components/FactorBreakdown';
+import RiskDisclosure from '../components/RiskDisclosure';
+import MetricCard from '../components/MetricCard';
+import { AnalysisResult } from '../types';
 
-type AnalysisResult = {
-  ticker: string;
-  current_price: number;
-  avg_price_20d: number | null;
-  sentiment_score: number;
-  headlines: string[];
-  signal: 'STRONG BUY' | 'BUY' | 'SELL' | 'STRONG SELL' | 'HOLD';
-  history: { date: string; price: number }[];
+// --- Local Components (Simple) ---
+
+const LoadingTerminal = ({ ticker }: { ticker: string }) => {
+  return (
+    <div className="font-mono text-xs sm:text-sm text-green-400 bg-black p-6 rounded-xl border border-green-500/30 shadow-[0_0_20px_rgba(0,255,0,0.1)] min-h-[300px] flex flex-col gap-2 justify-center items-center">
+      <div className="flex gap-2 items-center">
+        <Zap className="animate-pulse w-4 h-4" />
+        <span className="animate-pulse">INITIALIZING QUANT ENGINE FOR {ticker}...</span>
+      </div>
+      <p className="text-gray-600">Calculating RSI/MACD/VADER Factors...</p>
+    </div>
+  );
 };
+
+const FearGreedGauge = ({ score }: { score: number }) => {
+  const normalized = Math.max(0, Math.min(100, score)); // clamp
+  const rotation = (normalized / 100) * 180;
+
+  return (
+    <div className="relative w-full h-24 overflow-hidden flex items-end justify-center mb-2">
+      <div className="absolute w-40 h-40 border-[12px] border-gray-800 rounded-full top-0 box-border"></div>
+      <div
+        className="absolute w-40 h-40 border-[12px] border-transparent rounded-full top-0 box-border border-t-emerald-500 border-r-emerald-500 border-l-rose-500 transition-all duration-1000 ease-out"
+        style={{ transform: `rotate(${rotation - 45}deg)` }}
+      ></div>
+      <div
+        className="absolute bottom-0 w-1 h-20 bg-white origin-bottom transition-transform duration-1000 ease-out z-10"
+        style={{ transform: `rotate(${rotation - 90}deg)` }}
+      />
+      <div className="absolute bottom-0 w-4 h-4 bg-white rounded-full z-20" />
+    </div>
+  );
+};
+
+// --- Main Page ---
 
 export default function Home() {
   const [ticker, setTicker] = useState('');
@@ -22,196 +57,236 @@ export default function Home() {
 
   const handleScan = async () => {
     if (!ticker) return;
-
     setLoading(true);
-    setError('');
     setResult(null);
+    setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/analyze', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${API_URL}/analyze`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ticker }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
+      if (!response.ok) throw new Error('Data stream failed');
       const data = await response.json();
-      setResult(data);
+
+      // Delay for effect
+      await new Promise(r => setTimeout(r, 1000));
+
+      // Map API -> Frontend Type
+      setResult({
+        ticker: data.ticker,
+        current_price: data.current_price,
+        rsi: data.technical_analysis.rsi,
+        macd: data.technical_analysis.interpretation.includes('Bullish') ? 'Bullish' : 'Bearish',
+        sentiment_score: data.sentiment_analysis.score_normalized,
+        confidence_score: `${Math.round(data.signal_analysis.confidence_score)}%`,
+        signal: data.signal_analysis.signal,
+        headlines: data.sentiment_analysis.top_headlines.map((h: any) => h.title), // Simplified list for now
+        history: data.price_history,
+        factors: data.signal_analysis.factors,
+        meta: {
+          volume: data.fundamentals.volume_avg ? `${(data.fundamentals.volume_avg / 1000000).toFixed(1)}M` : 'N/A',
+          high: 0,
+          low: 0
+        }
+      });
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(err.message || 'System Failure');
     } finally {
       setLoading(false);
     }
   };
 
   const getSignalColor = (signal: string) => {
-    switch (signal) {
-      case 'STRONG BUY': return 'text-green-400 bg-green-400/10 border-green-400/50';
-      case 'BUY': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/50';
-      case 'SELL': return 'text-orange-400 bg-orange-400/10 border-orange-400/50';
-      case 'STRONG SELL': return 'text-red-500 bg-red-500/10 border-red-500/50';
-      default: return 'text-gray-400 bg-gray-400/10 border-gray-400/50';
-    }
+    if (signal.includes('BUY')) return 'text-emerald-400 border-emerald-500/50 shadow-emerald-500/20';
+    if (signal.includes('SELL')) return 'text-rose-400 border-rose-500/50 shadow-rose-500/20';
+    return 'text-cyan-400 border-cyan-500/50 shadow-cyan-500/20';
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-gray-100 font-sans selection:bg-blue-500/30">
-      {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Activity className="text-blue-500 h-6 w-6" />
-            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-              TradePulse <span className="text-gray-500 font-normal text-sm">PRO</span>
+    <div className="min-h-screen bg-[#030303] text-gray-200 font-sans selection:bg-cyan-500/30 overflow-x-hidden pb-20">
+
+      {/* Background Decor */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-900/10 blur-[120px] rounded-full" />
+      </div>
+
+      <main className="relative z-10 max-w-7xl mx-auto px-4 py-8">
+
+        {/* Header */}
+        <header className="flex justify-between items-center mb-12 border-b border-gray-800/50 pb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-tr from-cyan-500 to-blue-600 p-2 rounded-lg">
+              <BarChart3 className="text-white h-6 w-6" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tighter text-white">
+              Trade<span className="text-cyan-400">Pulse</span> <span className="text-[10px] text-gray-400 font-mono border border-gray-700 px-1 rounded ml-1 bg-gray-900">v5.0 INTELLIGENCE</span>
             </h1>
           </div>
-          <div className="flex gap-4">
-            {/* Placeholder for future nav items */}
+        </header>
+
+        {/* Search */}
+        <div className="max-w-xl mx-auto mb-16 relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-xl" />
+          <div className="relative flex shadow-2xl">
+            <div className="relative flex-1 bg-black/60 backdrop-blur-md rounded-l-xl border border-gray-800 focus-within:border-cyan-500/50 transition-colors">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 h-5 w-5" />
+              <input
+                type="text"
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+                placeholder="ENTER TICKER (e.g. NVDA)"
+                className="w-full bg-transparent border-none text-white px-12 py-4 text-lg focus:ring-0 placeholder:text-gray-700 tracking-wider font-mono uppercase focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={handleScan}
+              disabled={loading}
+              className="bg-gray-100 hover:bg-white text-black font-bold px-8 rounded-r-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {loading ? <Zap className="animate-spin h-5 w-5" /> : 'SCAN'}
+            </button>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Search Section */}
-        <div className="max-w-xl mx-auto mb-12">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <input
-                  type="text"
-                  value={ticker}
-                  onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                  placeholder="Seach Ticker (e.g. NVDA, TSLA)"
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-12 pr-4 py-4 text-lg focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all uppercase placeholder-gray-600 shadow-2xl"
-                  onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-                />
-              </div>
-              <button
-                onClick={handleScan}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-500 text-white font-medium px-8 rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 active:scale-95"
-              >
-                {loading ? (
-                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : 'Scan'}
-              </button>
-            </div>
-          </div>
+        {/* Content Area */}
+        <div className="min-h-[400px]">
+          {loading && <LoadingTerminal ticker={ticker} />}
+
           {error && (
-            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-400 animate-in fade-in slide-in-from-top-2">
-              <AlertCircle className="h-5 w-5" />
-              {error}
+            <div className="p-6 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 flex items-center gap-4 font-mono">
+              <AlertCircle />
+              <span>ERROR: {error}</span>
             </div>
           )}
-        </div>
 
-        {result && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Main Chart Card */}
-            <div className="lg:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-3xl font-bold flex items-center gap-3">
-                    {result.ticker}
-                    <span className="text-lg font-normal text-gray-500 bg-gray-800 px-2 py-0.5 rounded">USD</span>
-                  </h2>
-                  <p className="text-gray-400 text-sm mt-1">Last 3 Months Price Action</p>
+          {!loading && result && (
+            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 space-y-6">
+
+              {/* --- Top Row: Identity & Primary Signal --- */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                {/* Asset Info (Left, 4 cols) */}
+                <div className="lg:col-span-4 bg-gray-900/40 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <h1 className="text-8xl font-black text-white select-none">{result.ticker}</h1>
+                  </div>
+                  <div>
+                    <h2 className="text-4xl font-bold text-white mb-1 tracking-tight">{result.ticker}</h2>
+                    <p className="text-3xl font-mono text-cyan-400">${result.current_price.toFixed(2)}</p>
+                  </div>
+
+                  {/* Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-3 mt-8">
+                    <MetricCard
+                      title="RSI (14)"
+                      value={result.rsi.toFixed(1)}
+                      subValue={result.rsi < 30 ? "OVERSOLD" : result.rsi > 70 ? "OVERBOUGHT" : "NEUTRAL"}
+                      status={result.rsi < 30 || result.rsi > 70 ? 'warning' : 'neutral'}
+                    />
+                    <MetricCard
+                      title="TREND"
+                      value={result.macd}
+                      status={result.macd === 'Bullish' ? 'bullish' : 'bearish'}
+                    />
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold">${result.current_price.toFixed(2)}</p>
-                  <p className={`text-sm flex items-center justify-end gap-1 ${result.avg_price_20d && result.current_price > result.avg_price_20d ? 'text-green-400' : 'text-red-400'}`}>
-                    {result.avg_price_20d && result.current_price > result.avg_price_20d ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                    vs 20d MA ({result.avg_price_20d?.toFixed(2)})
-                  </p>
+
+                {/* Signal Core (Middle, 4 cols) */}
+                <div className={`lg:col-span-4 bg-gray-900/40 backdrop-blur-sm border rounded-2xl p-8 flex flex-col items-center justify-center relative shadow-2xl ${getSignalColor(result.signal)}`}>
+                  <p className="text-xs font-mono uppercase tracking-[0.2em] mb-4 opacity-80">Composite Alpha Signal</p>
+                  <div className="text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 mb-2 text-center leading-none">
+                    {result.signal}
+                  </div>
+                  <div className="mt-4 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono flex items-center gap-2">
+                    <span>CONFIDENCE:</span>
+                    <span className="font-bold text-white">{result.confidence_score}</span>
+                  </div>
+                </div>
+
+                {/* Explainability Panel (Right, 4 cols) */}
+                <div className="lg:col-span-4 space-y-4">
+                  <SignalExplanation factors={result.factors} signal={result.signal} />
+                  <FactorBreakdown factors={result.factors} />
                 </div>
               </div>
 
-              <div className="h-[400px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={result.history}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      stroke="#6b7280"
-                      tick={{ fontSize: 12 }}
-                      tickMargin={10}
-                      minTickGap={30}
-                    />
-                    <YAxis
-                      stroke="#6b7280"
-                      domain={['auto', 'auto']}
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(val) => `$${val}`}
-                    />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
-                      itemStyle={{ color: '#fff' }}
-                      labelStyle={{ color: '#9ca3af', marginBottom: '0.5rem' }}
-                      formatter={(val: number) => [`$${val.toFixed(2)}`, 'Price']}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="price"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      dot={false}
-                      activeDot={{ r: 6, fill: '#3b82f6' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+              {/* --- Middle Row: Chart & Deep Data --- */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {/* Signal & Sentiment Column */}
-            <div className="space-y-6">
-              {/* Signal Card */}
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-                <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br opacity-10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none ${result.signal.includes('BUY') ? 'from-green-500 to-emerald-500' :
-                    result.signal.includes('SELL') ? 'from-red-500 to-orange-500' : 'from-gray-500 to-white'
-                  }`} />
-
-                <h3 className="text-gray-400 font-medium mb-4 flex items-center gap-2">
-                  <Activity className="h-4 w-4" /> AI Signal
-                </h3>
-                <div className={`text-center py-8 rounded-xl border ${getSignalColor(result.signal)} mb-6`}>
-                  <span className="text-3xl font-black tracking-widest">{result.signal}</span>
+                {/* Main Chart */}
+                <div className="lg:col-span-2 bg-gray-900/50 border border-gray-800 rounded-2xl p-6 min-h-[400px] flex flex-col">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xs font-semibold text-gray-400 flex items-center gap-2 font-mono">
+                      <TrendingUp className="w-4 h-4 text-cyan-500" /> PRICE ACTION (3M)
+                    </h3>
+                  </div>
+                  <div className="flex-1 w-full min-h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={result.history}>
+                        <defs>
+                          <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
+                        {/* Using 0 domain to auto-scale dynamically */}
+                        <YAxis stroke="#4b5563" tick={{ fontSize: 10 }} domain={['auto', 'auto']} tickFormatter={(val) => `$${val}`} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#000', borderColor: '#333', color: '#fff', fontSize: '12px' }}
+                          itemStyle={{ color: '#06b6d4' }}
+                          labelFormatter={() => ''}
+                        />
+                        <Area type="monotone" dataKey="price" stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#colorPrice)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
-                    <span className="text-gray-400 text-sm">Sentiment Score</span>
-                    <div className={`font-bold ${result.sentiment_score > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {result.sentiment_score > 0 ? '+' : ''}{result.sentiment_score.toFixed(2)}
+                {/* Sidebar: Sentiment & Risk */}
+                <div className="space-y-6">
+                  {/* Sentiment Gauge */}
+                  <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 flex flex-col items-center">
+                    <h3 className="text-[10px] font-mono text-gray-500 mb-2 uppercase tracking-widest">News Sentiment Impact</h3>
+                    <FearGreedGauge score={result.sentiment_score} />
+                    <div className="flex justify-between w-full px-4 mt-[-10px]">
+                      <span className="text-xs text-rose-500 font-mono">BEARISH</span>
+                      <span className="text-xs text-emerald-500 font-mono">BULLISH</span>
+                    </div>
+                    <p className={`mt-4 font-mono text-2xl font-bold ${result.sentiment_score > 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {result.sentiment_score.toFixed(0)}/100
+                    </p>
+                  </div>
+
+                  <RiskDisclosure quality={null} meta={result.meta} />
+
+                  {/* News Feed */}
+                  <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-6 flex-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+                    <h3 className="text-[10px] font-mono text-gray-500 mb-4 flex items-center gap-2 uppercase tracking-widest"><Newspaper className="w-3 h-3" /> News Intelligence</h3>
+                    <div className="space-y-4">
+                      {result.headlines.length > 0 ? result.headlines.map((h, i) => (
+                        <div key={i} className="group cursor-default">
+                          <p className="text-xs text-gray-300 group-hover:text-cyan-400 transition-colors leading-relaxed">
+                            {h}
+                          </p>
+                          <div className="h-px bg-gray-800 mt-3 group-last:hidden" />
+                        </div>
+                      )) : <p className="text-gray-600 text-xs italic">No relevant news stream</p>}
                     </div>
                   </div>
                 </div>
+
               </div>
 
-              {/* News Card */}
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl flex-1">
-                <h3 className="text-gray-400 font-medium mb-4 flex items-center gap-2">
-                  <Newspaper className="h-4 w-4" /> Latest Headlines
-                </h3>
-                <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-                  {result.headlines.length > 0 ? result.headlines.map((headline, i) => (
-                    <div key={i} className="p-3 bg-gray-800/30 border border-gray-800 rounded-lg hover:border-gray-700 transition-colors">
-                      <p className="text-sm text-gray-300 leading-snug">{headline}</p>
-                    </div>
-                  )) : (
-                    <p className="text-gray-500 italic text-center py-8">No specific news found</p>
-                  )}
-                </div>
-              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );
